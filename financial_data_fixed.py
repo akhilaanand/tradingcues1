@@ -66,4 +66,10 @@ def main():
         with open('market_summary.json', 'w') as f_json:
             json.dump(summary_json, f_json, indent=2)
         
-        print("JSON summary written to market_summary.json_
+        print("JSON summary written to market_summary.json")
+    
+    except Exception as e:
+        print(f"Error in main function: {e}")
+
+if __name__ == "__main__":
+    main()
