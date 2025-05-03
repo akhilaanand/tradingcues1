@@ -1,20 +1,7 @@
 import yfinance as yf
-import pandas as pd
 import datetime
 import json
 import os
-import numpy as np
-
-# Helper function to make objects JSON serializable
-def convert_to_serializable(obj):
-    if isinstance(obj, (np.integer, np.floating, np.bool_)):
-        return obj.item()
-    elif isinstance(obj, pd.Series):
-        return obj.to_dict()
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    else:
-        return obj
 
 def get_market_data():
     try:
@@ -33,31 +20,39 @@ def get_market_data():
         
         # Get data for each index
         for symbol, name in indices.items():
-            data = yf.download(symbol, period="2d")
-            
-            # Make sure we have data and at least 2 rows
-            if data.empty or len(data) < 2:
-                print(f"Warning: Insufficient data for {name} ({symbol})")
+            try:
+                data = yf.download(symbol, period="2d")
+                
+                # Make sure we have data and at least 2 rows
+                if data.empty or len(data) < 2:
+                    print(f"Warning: Insufficient data for {name} ({symbol})")
+                    market_data[name] = {
+                        "price": "N/A",
+                        "change": "N/A",
+                        "percent_change": "N/A"
+                    }
+                    continue
+                    
+                # Get the latest closing price - convert to Python primitive types explicitly
+                latest_close = float(data['Close'].iloc[-1])
+                previous_close = float(data['Close'].iloc[-2])
+                
+                # Calculate the change
+                change = float(latest_close - previous_close)
+                percent_change = float((change / previous_close) * 100)
+                
+                market_data[name] = {
+                    "price": float(round(latest_close, 2)),
+                    "change": float(round(change, 2)),
+                    "percent_change": float(round(percent_change, 2))
+                }
+            except Exception as e:
+                print(f"Error processing {name}: {e}")
                 market_data[name] = {
                     "price": "N/A",
                     "change": "N/A",
                     "percent_change": "N/A"
                 }
-                continue
-                
-            # Get the latest closing price - ensure we convert to native Python float
-            latest_close = float(data['Close'].iloc[-1])
-            previous_close = float(data['Close'].iloc[-2])
-            
-            # Calculate the change
-            change = latest_close - previous_close
-            percent_change = (change / previous_close) * 100
-            
-            market_data[name] = {
-                "price": round(latest_close, 2),
-                "change": round(change, 2),
-                "percent_change": round(percent_change, 2)
-            }
         
         # Let's add a few major stocks as well
         stocks = {
@@ -68,38 +63,51 @@ def get_market_data():
         }
         
         for symbol, name in stocks.items():
-            data = yf.download(symbol, period="2d")
-            
-            # Make sure we have data and at least 2 rows
-            if data.empty or len(data) < 2:
-                print(f"Warning: Insufficient data for {name} ({symbol})")
+            try:
+                data = yf.download(symbol, period="2d")
+                
+                # Make sure we have data and at least 2 rows
+                if data.empty or len(data) < 2:
+                    print(f"Warning: Insufficient data for {name} ({symbol})")
+                    market_data[name] = {
+                        "price": "N/A",
+                        "change": "N/A",
+                        "percent_change": "N/A"
+                    }
+                    continue
+                    
+                # Get the latest closing price - convert to Python primitive types explicitly
+                latest_close = float(data['Close'].iloc[-1])
+                previous_close = float(data['Close'].iloc[-2])
+                
+                # Calculate the change
+                change = float(latest_close - previous_close)
+                percent_change = float((change / previous_close) * 100)
+                
+                market_data[name] = {
+                    "price": float(round(latest_close, 2)),
+                    "change": float(round(change, 2)),
+                    "percent_change": float(round(percent_change, 2))
+                }
+            except Exception as e:
+                print(f"Error processing {name}: {e}")
                 market_data[name] = {
                     "price": "N/A",
                     "change": "N/A",
                     "percent_change": "N/A"
                 }
-                continue
-                
-            # Get the latest closing price - ensure we convert to native Python float
-            latest_close = float(data['Close'].iloc[-1])
-            previous_close = float(data['Close'].iloc[-2])
-            
-            # Calculate the change
-            change = latest_close - previous_close
-            percent_change = (change / previous_close) * 100
-            
-            market_data[name] = {
-                "price": round(latest_close, 2),
-                "change": round(change, 2),
-                "percent_change": round(percent_change, 2)
-            }
         
         # Create serializable data structure
         result = {"date": today, "data": market_data}
         
-        # Save the market data to a JSON file
+        # Debug output to help diagnose any issues
+        print(f"Market data structure: {type(result)}")
+        for key, value in market_data.items():
+            print(f"{key}: {type(value['price'])}, {type(value['change'])}, {type(value['percent_change'])}")
+        
+        # Save the market data to a JSON file - use strict=False to handle NaN values
         with open('market_data.json', 'w') as f:
-            json.dump(result, f, indent=4, default=convert_to_serializable)
+            json.dump(result, f, indent=4)
             
         return result
     except Exception as e:
@@ -110,51 +118,51 @@ def format_market_summary(market_data):
     if not market_data:
         return "Failed to fetch market data."
     
-    # Defensive programming - make sure we have valid data
     try:
         date = market_data['date']
         data = market_data['data']
-    except (TypeError, KeyError):
-        return "Failed to parse market data properly."
-    
-    summary = f"Market Summary for {date}\n"
-    summary += "-" * 50 + "\n\n"
-    
-    # Add indices data
-    summary += "Market Indices:\n"
-    for name in ['S&P 500', 'Dow Jones', 'NASDAQ', 'VIX']:
-        if name in data:
-            price = data[name]['price']
-            change = data[name]['change']
-            percent_change = data[name]['percent_change']
-            
-            if price != "N/A":
-                summary += f"{name}: {price:,.2f} "
-                if change >= 0:
-                    summary += f"↑ +{change:,.2f} (+{percent_change:,.2f}%)\n"
+        
+        summary = f"Market Summary for {date}\n"
+        summary += "-" * 50 + "\n\n"
+        
+        # Add indices data
+        summary += "Market Indices:\n"
+        for name in ['S&P 500', 'Dow Jones', 'NASDAQ', 'VIX']:
+            if name in data:
+                price = data[name]['price']
+                change = data[name]['change']
+                percent_change = data[name]['percent_change']
+                
+                if price != "N/A":
+                    summary += f"{name}: {price:,.2f} "
+                    if isinstance(change, (int, float)) and change >= 0:
+                        summary += f"↑ +{change:,.2f} (+{percent_change:,.2f}%)\n"
+                    else:
+                        summary += f"↓ {change:,.2f} ({percent_change:,.2f}%)\n"
                 else:
-                    summary += f"↓ {change:,.2f} ({percent_change:,.2f}%)\n"
-            else:
-                summary += f"{name}: Data not available\n"
-    
-    # Add major stocks data
-    summary += "\nMajor Stocks:\n"
-    for name in ['Apple', 'Microsoft', 'Amazon', 'Google']:
-        if name in data:
-            price = data[name]['price']
-            change = data[name]['change']
-            percent_change = data[name]['percent_change']
-            
-            if price != "N/A":
-                summary += f"{name}: {price:,.2f} "
-                if change >= 0:
-                    summary += f"↑ +{change:,.2f} (+{percent_change:,.2f}%)\n"
+                    summary += f"{name}: Data not available\n"
+        
+        # Add major stocks data
+        summary += "\nMajor Stocks:\n"
+        for name in ['Apple', 'Microsoft', 'Amazon', 'Google']:
+            if name in data:
+                price = data[name]['price']
+                change = data[name]['change']
+                percent_change = data[name]['percent_change']
+                
+                if price != "N/A":
+                    summary += f"{name}: {price:,.2f} "
+                    if isinstance(change, (int, float)) and change >= 0:
+                        summary += f"↑ +{change:,.2f} (+{percent_change:,.2f}%)\n"
+                    else:
+                        summary += f"↓ {change:,.2f} ({percent_change:,.2f}%)\n"
                 else:
-                    summary += f"↓ {change:,.2f} ({percent_change:,.2f}%)\n"
-            else:
-                summary += f"{name}: Data not available\n"
-    
-    return summary
+                    summary += f"{name}: Data not available\n"
+        
+        return summary
+    except Exception as e:
+        print(f"Error formatting market summary: {e}")
+        return "Error formatting market summary."
 
 def main():
     # Get market data
