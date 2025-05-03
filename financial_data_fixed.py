@@ -1,5 +1,6 @@
 import yfinance as yf
 import datetime
+import json
 
 def main():
     try:
@@ -21,53 +22,48 @@ def main():
         print("\nRaw data:")
         print(data.tail(2))
         
-        # Extract values as Python primitives
-        try:
-            latest_close = data['Close'].iloc[-1]
-            previous_close = data['Close'].iloc[-2]
-            
-            # Explicitly convert to Python primitives
-            latest_close_float = float(latest_close)
-            previous_close_float = float(previous_close)
-            
-            print(f"\nVIX Latest Close: {latest_close_float:.2f}")
-            print(f"VIX Previous Close: {previous_close_float:.2f}")
-            
-            # Simple up/down indicator
-            change = latest_close_float - previous_close_float
-            percent_change = (change / previous_close_float) * 100
-            
-            if change >= 0:
-                direction = "UP ↑"
-            else:
-                direction = "DOWN ↓"
-            
-            print(f"\nMarket Volatility is {direction}")
-            print(f"VIX Change: {change:.2f} ({percent_change:.2f}%)")
-            
-            # Write a simple summary to file
-            summary = f"Market Summary for {today}\n"
-            summary += "-" * 50 + "\n\n"
-            summary += f"VIX: {latest_close_float:.2f} "
-            
-            if change >= 0:
-                summary += f"↑ +{change:.2f} (+{percent_change:.2f}%)\n"
-            else:
-                summary += f"↓ {change:.2f} ({percent_change:.2f}%)\n"
-                
-            summary += f"\nMarket Volatility is {direction}\n"
-            
-            # Save the summary to a file
-            with open('market_summary.txt', 'w') as f:
-                f.write(summary)
-                
-            print("\nSummary written to market_summary.txt")
-            
-        except Exception as e:
-            print(f"Error processing VIX data: {e}")
-            
-    except Exception as e:
-        print(f"Error in main function: {e}")
-
-if __name__ == "__main__":
-    main()
+        # Extract and convert values
+        latest_close = float(data['Close'].iloc[-1])
+        previous_close = float(data['Close'].iloc[-2])
+        
+        print(f"\nVIX Latest Close: {latest_close:.2f}")
+        print(f"VIX Previous Close: {previous_close:.2f}")
+        
+        change = latest_close - previous_close
+        percent_change = (change / previous_close) * 100
+        direction = "UP ↑" if change >= 0 else "DOWN ↓"
+        
+        print(f"\nMarket Volatility is {direction}")
+        print(f"VIX Change: {change:.2f} ({percent_change:.2f}%)")
+        
+        # Build string summary
+        summary_text = f"Market Summary for {today}\n"
+        summary_text += "-" * 50 + "\n\n"
+        summary_text += f"VIX: {latest_close:.2f} "
+        if change >= 0:
+            summary_text += f"↑ +{change:.2f} (+{percent_change:.2f}%)\n"
+        else:
+            summary_text += f"↓ {change:.2f} ({percent_change:.2f}%)\n"
+        summary_text += f"\nMarket Volatility is {direction}\n"
+        
+        with open('market_summary.txt', 'w') as f:
+            f.write(summary_text)
+        
+        print("\nSummary written to market_summary.txt")
+        
+        # Build JSON-safe summary
+        summary_json = {
+            "date": today,
+            "VIX": {
+                "latest_close": latest_close,
+                "previous_close": previous_close,
+                "change": round(change, 2),
+                "percent_change": round(percent_change, 2),
+                "direction": direction
+            }
+        }
+        
+        with open('market_summary.json', 'w') as f_json:
+            json.dump(summary_json, f_json, indent=2)
+        
+        print("JSON summary written to market_summary.json_
