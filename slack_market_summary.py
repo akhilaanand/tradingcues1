@@ -2,6 +2,19 @@ import json
 import requests
 import os
 import sys
+import numpy as np
+import pandas as pd
+
+# Helper function to make objects JSON serializable for Slack
+class JsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (np.integer, np.floating, np.bool_)):
+            return obj.item()
+        elif isinstance(obj, pd.Series):
+            return obj.to_dict()
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(JsonEncoder, self).default(obj)
 
 def send_slack_message():
     try:
@@ -122,8 +135,10 @@ def send_slack_message():
                 "blocks": blocks
             }
             
-            # Send the message
-            response = requests.post(webhook_url, json=payload)
+            # Send the message using custom JSON encoder
+            payload_json = json.dumps(payload, cls=JsonEncoder)
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(webhook_url, data=payload_json, headers=headers)
             
             # Check if message was sent successfully
             if response.status_code == 200:
@@ -136,7 +151,9 @@ def send_slack_message():
             payload = {
                 "text": summary
             }
-            response = requests.post(webhook_url, json=payload)
+            payload_json = json.dumps(payload, cls=JsonEncoder)
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(webhook_url, data=payload_json, headers=headers)
             
             if response.status_code == 200:
                 print("Market summary sent to Slack successfully!")
