@@ -3,6 +3,18 @@ import pandas as pd
 import datetime
 import json
 import os
+import numpy as np
+
+# Helper function to make objects JSON serializable
+def convert_to_serializable(obj):
+    if isinstance(obj, (np.integer, np.floating, np.bool_)):
+        return obj.item()
+    elif isinstance(obj, pd.Series):
+        return obj.to_dict()
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
 
 def get_market_data():
     try:
@@ -33,9 +45,9 @@ def get_market_data():
                 }
                 continue
                 
-            # Get the latest closing price
-            latest_close = data['Close'].iloc[-1]
-            previous_close = data['Close'].iloc[-2]
+            # Get the latest closing price - ensure we convert to native Python float
+            latest_close = float(data['Close'].iloc[-1])
+            previous_close = float(data['Close'].iloc[-2])
             
             # Calculate the change
             change = latest_close - previous_close
@@ -68,9 +80,9 @@ def get_market_data():
                 }
                 continue
                 
-            # Get the latest closing price
-            latest_close = data['Close'].iloc[-1]
-            previous_close = data['Close'].iloc[-2]
+            # Get the latest closing price - ensure we convert to native Python float
+            latest_close = float(data['Close'].iloc[-1])
+            previous_close = float(data['Close'].iloc[-2])
             
             # Calculate the change
             change = latest_close - previous_close
@@ -82,11 +94,14 @@ def get_market_data():
                 "percent_change": round(percent_change, 2)
             }
         
+        # Create serializable data structure
+        result = {"date": today, "data": market_data}
+        
         # Save the market data to a JSON file
         with open('market_data.json', 'w') as f:
-            json.dump({"date": today, "data": market_data}, f, indent=4)
+            json.dump(result, f, indent=4, default=convert_to_serializable)
             
-        return {"date": today, "data": market_data}
+        return result
     except Exception as e:
         print(f"Error fetching market data: {e}")
         return None
@@ -95,8 +110,12 @@ def format_market_summary(market_data):
     if not market_data:
         return "Failed to fetch market data."
     
-    date = market_data['date']
-    data = market_data['data']
+    # Defensive programming - make sure we have valid data
+    try:
+        date = market_data['date']
+        data = market_data['data']
+    except (TypeError, KeyError):
+        return "Failed to parse market data properly."
     
     summary = f"Market Summary for {date}\n"
     summary += "-" * 50 + "\n\n"
