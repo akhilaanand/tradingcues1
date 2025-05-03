@@ -1,4 +1,3 @@
-import json
 import requests
 import os
 import sys
@@ -19,17 +18,13 @@ def send_slack_message():
         with open('market_summary.txt', 'r') as f:
             summary = f.read()
         
-        # Simple plain text message - most reliable approach
-        plain_payload = {
-            "text": "```" + summary + "```"
+        # Most basic possible message payload
+        payload = {
+            "text": summary
         }
         
-        # Try sending the plain text message first
-        response = requests.post(
-            webhook_url, 
-            headers={'Content-Type': 'application/json'},
-            data=json.dumps(plain_payload)
-        )
+        # Send as plain text
+        response = requests.post(webhook_url, json=payload)
         
         if response.status_code == 200:
             print("Market summary sent to Slack successfully!")
