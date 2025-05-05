@@ -79,10 +79,10 @@ def main():
         print(summary)
         
         # Save the summary to a text file
-        with open('trade_setup_summary.txt', 'w') as f:
+        with open('market_summary.txt', 'w') as f:
             f.write(summary)
         
-        print("\nSummary written to trade_setup_summary.txt")
+        print("\nSummary written to market_summary.txt")
         
         # Save the summary as JSON
         summary_json = {
