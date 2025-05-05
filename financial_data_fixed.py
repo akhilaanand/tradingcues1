@@ -1,99 +1,94 @@
 import yfinance as yf
 import datetime
 import json
+import os
 
-# Fetch financial data for a given ticker
-def fetch_data(ticker):
-    data = yf.download(ticker, period="2d")
-    
-    # Make sure data is available
-    if data.empty or len(data) < 2:
-        raise Exception(f"Insufficient data for {ticker}")
-    
-    latest = float(data['Close'].iloc[-1])
-    previous = float(data['Close'].iloc[-2])
-    
-    return {"latest": latest, "previous": previous}
+def fetch_data(ticker, label):
+    try:
+        print(f"Fetching data for {label} ({ticker})...")
+        data = yf.download(ticker, period="2d", progress=False)
 
-# Format the output for each data point
-def format_line(name, latest, previous):
-    change = latest - previous
-    percent_change = (change / previous) * 100
-    direction = "🟢" if change >= 0 else "🔴"
-    trend = "bullish" if change >= 0 else "bearish"
-    
-    line = f"*{name}*: {latest:.2f} {direction}"
-    line += f"\n{name} looks *{trend} {direction}*"
-    line += f" by {abs(change):.2f} points ({percent_change:.2f}%)\n"
-    
-    return line
+        if data.empty or len(data) < 2:
+            print(f"Warning: No data found for {label}")
+            return None
+
+        print(f"Raw data for {label}:")
+        print(data.tail(2))
+
+        latest = float(data['Close'].iloc[-1])
+        previous = float(data['Close'].iloc[-2])
+        change = latest - previous
+        percent_change = (change / previous) * 100
+        direction_arrow = "↑" if change >= 0 else "↓"
+        sentiment_dot = "🟢" if change >= 0 else "🔴"
+        sentiment_word = "bullish" if change >= 0 else "bearish"
+
+        return {
+            "label": label,
+            "latest": latest,
+            "change": change,
+            "percent_change": percent_change,
+            "arrow": direction_arrow,
+            "dot": sentiment_dot,
+            "sentiment": sentiment_word
+        }
+
+    except Exception as e:
+        print(f"Error fetching data for {label}: {e}")
+        return None
 
 def main():
     try:
-        # Get today's date
         today = datetime.datetime.now().strftime('%Y-%m-%d')
-        print(f"Trade setup for {today}")
+        print(f"Trade Setup for {today}")
         print("-" * 50)
-        
-        # Initialize the summary
-        summary_lines = []
-        
-        # Fetch VIX data
-        try:
-            vix = fetch_data('^VIX')
-            vix_line = format_line("VIX", vix['latest'], vix['previous'])
-            summary_lines.append(vix_line)
-        except Exception as e:
-            print(f"VIX data fetch failed: {e}")
-        
-        # Fetch S&P 500 data
-        try:
-            sp500 = fetch_data('^GSPC')
-            sp500_line = format_line("S&P 500", sp500['latest'], sp500['previous'])
-            summary_lines.append(sp500_line)
-        except Exception as e:
-            print(f"S&P 500 data fetch failed: {e}")
-        
-        # Fetch Gold data
-        try:
-            gold = fetch_data('GC=F')
-            gold_line = format_line("Gold", gold['latest'], gold['previous'])
-            summary_lines.append(gold_line)
-        except Exception as e:
-            print(f"Gold data fetch failed: {e}")
-        
-        # Fetch Crude Oil data
-        try:
-            crude = fetch_data('CL=F')
-            crude_line = format_line("Crude Oil", crude['latest'], crude['previous'])
-            summary_lines.append(crude_line)
-        except Exception as e:
-            print(f"Crude Oil data fetch failed: {e}")
-        
-        # Print the summary
+
+        # Fetch individual data points
+        vix = fetch_data('^VIX', 'VIX')
+        sp500 = fetch_data('^GSPC', 'S&P 500')
+        gold = fetch_data('GC=F', 'Gold')
+        crude = fetch_data('CL=F', 'Crude Oil')
+
         summary = f"*Trade setup for {today}*\n"
-        summary += "-" * 50 + "\n"
-        summary += "\n".join(summary_lines)
-        
-        # Print summary to the console
-        print(summary)
-        
-        # Save the summary to a text file
+        summary += "--------------------------------------------------\n"
+
+        if vix:
+            summary += f"*{vix['label']}*: {vix['latest']:.2f} {vix['arrow']} +{vix['change']:.2f} ({vix['percent_change']:.2f}%)\n"
+            summary += f"Market Volatility is *UP {vix['dot']}*\n\n"
+
+        if sp500:
+            summary += f"*{sp500['label']}*: {sp500['latest']:.2f} {sp500['dot']}\n"
+            summary += f"{sp500['label']} looks *{sp500['sentiment']} {sp500['dot']}*\n\n"
+
+        if gold:
+            summary += f"*{gold['label']}*: {gold['latest']:.2f} {gold['dot']}\n"
+            summary += f"{'Up' if gold['change'] >= 0 else 'Down'} by {abs(gold['change']):.2f} ({abs(gold['percent_change']):.2f}%)\n\n"
+
+        if crude:
+            summary += f"*{crude['label']}*: {crude['latest']:.2f} {crude['dot']}\n"
+            summary += f"{'Up' if crude['change'] >= 0 else 'Down'} by {abs(crude['change']):.2f} ({abs(crude['percent_change']):.2f}%)\n\n"
+
+        # Save text file
         with open('market_summary.txt', 'w') as f:
             f.write(summary)
-        
+
         print("\nSummary written to market_summary.txt")
-        
-        # Save the summary as JSON
-        summary_json = {
+        print(summary)
+
+        # Optional: JSON output for structured use
+        json_output = {
             "date": today,
-            "data": summary_lines
+            "vix": vix,
+            "sp500": sp500,
+            "gold": gold,
+            "crude": crude
         }
-        with open('trade_setup_summary.json', 'w') as f_json:
-            json.dump(summary_json, f_json, indent=2)
-        
-        print("JSON summary written to trade_setup_summary.json")
-    
+
+        with open('market_summary.json', 'w') as jf:
+            json.dump(json_output, jf, indent=2)
+
+        print("JSON summary written to market_summary.json")
+
     except Exception as e:
         print(f"Error in main function: {e}")
 
