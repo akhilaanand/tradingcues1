@@ -37,13 +37,26 @@ def main():
         summary += f"*Crude Oil*: {crude:.2f}\n"
         summary += f"{crude_dir} by {abs(crude_change):.2f} points\n\n"
 
+    try:
+    crude = fetch_data('CL=F')
+    crude_line = format_line("Crude Oil", crude['latest'], crude['previous'])
+    summary_lines.append(crude_line)
+except Exception as e:
+    print(f"Crude Oil data fetch failed: {e}")
+
     # 3. Gold
     gold, gold_change, gold_prev = get_price_data('GC=F')
     if gold is not None:
         gold_dir, gold_abs_change, gold_pct = format_change(gold_change, gold_prev)
         summary += f"*Gold*: {gold:.2f}\n"
         summary += f"{gold_dir} by {abs(gold_change):.2f} points\n\n"
-
+try:
+    gold = fetch_data('GC=F')
+    gold_line = format_line("Gold", gold['latest'], gold['previous'])
+    summary_lines.append(gold_line)
+except Exception as e:
+    print(f"Gold data fetch failed: {e}")
+    
     # 4. S&P 500
     spx, spx_change, spx_prev = get_price_data('^GSPC')
     if spx is not None:
