@@ -15,7 +15,7 @@ def send_slack_message():
             print("Error: market_summary.txt not found. Run financial_data_fixed.py first.")
             sys.exit(1)
             
-        with open('trade_setup_summary.txt', 'r') as f:
+        with open('market_summary.txt', 'r') as f:
             summary = f.read()
         
         # Most basic possible message payload
