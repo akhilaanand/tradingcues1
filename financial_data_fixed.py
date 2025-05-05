@@ -2,84 +2,100 @@ import yfinance as yf
 import datetime
 import json
 
-def get_price_data(ticker):
-    data = yf.download(ticker, period="2d", auto_adjust=True)
+# Fetch financial data for a given ticker
+def fetch_data(ticker):
+    data = yf.download(ticker, period="2d")
+    
+    # Make sure data is available
     if data.empty or len(data) < 2:
-        return None, None, None
+        raise Exception(f"Insufficient data for {ticker}")
+    
     latest = float(data['Close'].iloc[-1])
     previous = float(data['Close'].iloc[-2])
-    change = latest - previous
-    return latest, change, previous
+    
+    return {"latest": latest, "previous": previous}
 
-def format_change(change, previous):
-    percent = (change / previous) * 100 if previous != 0 else 0
-    direction = "🟢" if change > 0 else "🔴"
-    return direction, change, percent
+# Format the output for each data point
+def format_line(name, latest, previous):
+    change = latest - previous
+    percent_change = (change / previous) * 100
+    direction = "🟢" if change >= 0 else "🔴"
+    trend = "bullish" if change >= 0 else "bearish"
+    
+    line = f"*{name}*: {latest:.2f} {direction}"
+    line += f"\n{name} looks *{trend} {direction}*"
+    line += f" by {abs(change):.2f} points ({percent_change:.2f}%)\n"
+    
+    return line
 
 def main():
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
-    summary = f"*Trade setup for {today}*\n"
-    summary += "--------------------------------------------------\n"
-
-    # 1. VIX
-    vix, vix_change, vix_prev = get_price_data('^VIX')
-    if vix is not None:
-        vix_dir, vix_abs_change, vix_pct = format_change(vix_change, vix_prev)
-        arrow = "↑" if vix_change >= 0 else "↓"
-        market_trend = "UP 🟢" if vix_change >= 0 else "DOWN 🔴"
-        summary += f"*VIX*: {vix:.2f} {arrow} +{abs(vix_change):.2f} ({abs(vix_pct):.2f}%)\n"
-        summary += f"Market Volatility is *{market_trend}*\n\n"
-
-    # 2. Crude Oil
-    crude, crude_change, crude_prev = get_price_data('CL=F')
-    if crude is not None:
-        crude_dir, crude_abs_change, crude_pct = format_change(crude_change, crude_prev)
-        summary += f"*Crude Oil*: {crude:.2f}\n"
-        summary += f"{crude_dir} by {abs(crude_change):.2f} points\n\n"
-
     try:
-    crude = fetch_data('CL=F')
-    crude_line = format_line("Crude Oil", crude['latest'], crude['previous'])
-    summary_lines.append(crude_line)
-except Exception as e:
-    print(f"Crude Oil data fetch failed: {e}")
-
-    # 3. Gold
-    gold, gold_change, gold_prev = get_price_data('GC=F')
-    if gold is not None:
-        gold_dir, gold_abs_change, gold_pct = format_change(gold_change, gold_prev)
-        summary += f"*Gold*: {gold:.2f}\n"
-        summary += f"{gold_dir} by {abs(gold_change):.2f} points\n\n"
-try:
-    gold = fetch_data('GC=F')
-    gold_line = format_line("Gold", gold['latest'], gold['previous'])
-    summary_lines.append(gold_line)
-except Exception as e:
-    print(f"Gold data fetch failed: {e}")
+        # Get today's date
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        print(f"Trade setup for {today}")
+        print("-" * 50)
+        
+        # Initialize the summary
+        summary_lines = []
+        
+        # Fetch VIX data
+        try:
+            vix = fetch_data('^VIX')
+            vix_line = format_line("VIX", vix['latest'], vix['previous'])
+            summary_lines.append(vix_line)
+        except Exception as e:
+            print(f"VIX data fetch failed: {e}")
+        
+        # Fetch S&P 500 data
+        try:
+            sp500 = fetch_data('^GSPC')
+            sp500_line = format_line("S&P 500", sp500['latest'], sp500['previous'])
+            summary_lines.append(sp500_line)
+        except Exception as e:
+            print(f"S&P 500 data fetch failed: {e}")
+        
+        # Fetch Gold data
+        try:
+            gold = fetch_data('GC=F')
+            gold_line = format_line("Gold", gold['latest'], gold['previous'])
+            summary_lines.append(gold_line)
+        except Exception as e:
+            print(f"Gold data fetch failed: {e}")
+        
+        # Fetch Crude Oil data
+        try:
+            crude = fetch_data('CL=F')
+            crude_line = format_line("Crude Oil", crude['latest'], crude['previous'])
+            summary_lines.append(crude_line)
+        except Exception as e:
+            print(f"Crude Oil data fetch failed: {e}")
+        
+        # Print the summary
+        summary = f"*Trade setup for {today}*\n"
+        summary += "-" * 50 + "\n"
+        summary += "\n".join(summary_lines)
+        
+        # Print summary to the console
+        print(summary)
+        
+        # Save the summary to a text file
+        with open('trade_setup_summary.txt', 'w') as f:
+            f.write(summary)
+        
+        print("\nSummary written to trade_setup_summary.txt")
+        
+        # Save the summary as JSON
+        summary_json = {
+            "date": today,
+            "data": summary_lines
+        }
+        with open('trade_setup_summary.json', 'w') as f_json:
+            json.dump(summary_json, f_json, indent=2)
+        
+        print("JSON summary written to trade_setup_summary.json")
     
-    # 4. S&P 500
-    spx, spx_change, spx_prev = get_price_data('^GSPC')
-    if spx is not None:
-        spx_dir, spx_abs_change, spx_pct = format_change(spx_change, spx_prev)
-        spx_trend = "bullish 🟢" if spx_change > 0 else "bearish 🔴"
-        summary += f"*S&P 500*: {spx:.2f} {spx_dir}\n"
-        summary += f"S&P 500 looks *{spx_trend}*\n"
-
-    # Print and save
-    print(summary)
-    with open('market_summary.txt', 'w') as f:
-        f.write(summary)
-
-    # Optional JSON output
-    summary_json = {
-        "date": today,
-        "VIX": vix,
-        "CrudeOil": crude,
-        "Gold": gold,
-        "S&P500": spx
-    }
-    with open('market_summary.json', 'w') as f_json:
-        json.dump(summary_json, f_json, indent=2)
+    except Exception as e:
+        print(f"Error in main function: {e}")
 
 if __name__ == "__main__":
     main()
