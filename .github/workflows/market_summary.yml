@@ -3,7 +3,7 @@ on:
   schedule:
     # Run at 8:40 AM IST - adjust timezone as needed
     # This is in cron syntax: minute hour day month day-of-week
-    - cron: '10 3 * * *'  # 3:10 AM UTC = 8:40 AM IST
+    - cron: '10 3 * * *'  # This runs at 8:40 AM IST daily
   
   # Allow manual triggering for testing
   workflow_dispatch:
