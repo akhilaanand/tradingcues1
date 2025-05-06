@@ -5,7 +5,7 @@ import requests
 from datetime import timedelta
 
 # FRED API setup
-API_KEY = "your_fred_api_key"  # Replace with your FRED API key
+API_KEY = "e5b94614ba607e9725122f6ce56e5e2e"  # Replace with your FRED API key
 BASE_URL = "https://api.stlouisfed.org/fred/series/observations"
 
 def fetch_recent_fred_data(series_id, label):
