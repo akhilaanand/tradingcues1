@@ -23,7 +23,7 @@ def fetch_recent_fred_data(series_id, label):
         return None
     
     latest_obs = observations[-1]
-    latest_date = datetime.strptime(latest_obs["date"], "%Y-%m-%d").date()
+    latest_date = datetime.datetime.strptime(latest_obs["date"], "%Y-%m-%d").date()
     latest_value = latest_obs["value"]
 
     # Only include if released in the last 24 hours
