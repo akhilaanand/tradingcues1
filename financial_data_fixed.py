@@ -27,7 +27,7 @@ def fetch_recent_fred_data(series_id, label):
     latest_value = latest_obs["value"]
 
     # Only include if released in the last 24 hours
-    if datetime.today().date() - latest_date <= timedelta(days=1):
+    if datetime.datetime.today().date() - latest_date <= timedelta(days=1):
         return f"*{label} Update*: {latest_value} (as of {latest_date})"
     return None
 
