@@ -1,39 +1,61 @@
 import yfinance as yf
 import datetime
-import json
 import requests
 from datetime import timedelta
 
 API_KEY = "e5b94614ba607e9725122f6ce56e5e2e"
-BASE_URL = "https://api.stlouisfed.org/fred/series/observations"
+FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
 
-def fetch_recent_fred_data(series_id, label):
+def fetch_recent_fred_data(series_id, label, format_func=None):
     params = {
         "series_id": series_id,
         "api_key": API_KEY,
         "file_type": "json"
     }
-    response = requests.get(BASE_URL, params=params)
+    response = requests.get(FRED_URL, params=params)
     data = response.json()
-    
+
     observations = data.get("observations", [])
     if len(observations) < 2:
         return None
-    
-    latest_obs = observations[-1]
-    latest_date = datetime.datetime.strptime(latest_obs["date"], "%Y-%m-%d").date()
-    latest_value = latest_obs["value"]
 
-    if datetime.datetime.now().date() - latest_date <= timedelta(days=1):
-        return f"*{label} Update*: {latest_value} (as of {latest_date})"
+    latest = observations[-1]
+    previous = observations[-2]
+
+    if latest["value"] == "." or previous["value"] == ".":
+        return None
+
+    latest_value = float(latest["value"])
+    previous_value = float(previous["value"])
+    date = latest["date"]
+
+    if latest_value != previous_value:
+        change = latest_value - previous_value
+        change_pct = (change / previous_value) * 100
+        if format_func:
+            return format_func(label, latest_value, change, change_pct, date)
+        else:
+            arrow = "🟢" if change > 0 else "🔻"
+            return f"*{label}*: {latest_value:.2f} ({arrow}, {change:+.2f}, {change_pct:+.2f}%) — as of {date}"
     return None
 
-def get_economic_updates():
-    updates = []
-    updates.append(fetch_recent_fred_data("FEDFUNDS", "Fed Rate"))
-    updates.append(fetch_recent_fred_data("CPIAUCSL", "US CPI"))
-    updates.append(fetch_recent_fred_data("UNRATE", "Unemployment Rate"))
-    return [u for u in updates if u]
+def format_cpi(label, val, change, pct, date):
+    return f"*{label} (YoY)*: {val:.2f}% ({'🟢' if change > 0 else '🔻'}, {change:+.2f} pp) — as of {date}"
+
+def format_gdp(label, val, change, pct, date):
+    return f"*{label} (Quarterly)*: {val:.2f} Tn USD ({'🟢' if change > 0 else '🔻'}, {change:+.2f}) — as of {date}"
+
+def get_us_macro_updates():
+    updates = [
+        fetch_recent_fred_data("FEDFUNDS", "Fed Funds Rate"),
+        fetch_recent_fred_data("CPIAUCSL", "US CPI", format_cpi),
+        fetch_recent_fred_data("GDP", "US GDP", format_gdp),
+        fetch_recent_fred_data("UNRATE", "Unemployment Rate")
+    ]
+    updates = [u for u in updates if u]
+    if not updates:
+        return ["There is no new US macro update for the updates you follow."]
+    return updates
 
 def fetch_data(symbol):
     print(f"Fetching data for {symbol}...")
@@ -47,46 +69,6 @@ def fetch_data(symbol):
     previous = clean_close.iloc[-2].item()
     return latest, previous
 
-def fetch_fii_dii_data():
-    headers = {
-        'User-Agent': 'Mozilla/5.0',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://www.nseindia.com/',
-    }
-    session = requests.Session()
-
-    try:
-        session.get("https://www.nseindia.com", headers=headers)
-        fii_dii_url = "https://www.nseindia.com/api/fii-dii?type=equity"
-        response = session.get(fii_dii_url, headers=headers)
-        if response.status_code != 200 or not response.content.strip():
-            raise ValueError("Empty or bad response from NSE")
-        data = response.json()
-    except Exception as e:
-        print(f"Error fetching FII/DII data: {e}")
-        return "*FII/DII Activity*: Unable to fetch data ⚠️"
-
-    last_entry = data['data'][-1]
-    fii_buy = float(last_entry['fii_buy_value'])
-    fii_sell = float(last_entry['fii_sell_value'])
-    fii_net = fii_buy - fii_sell
-
-    dii_buy = float(last_entry['dii_buy_value'])
-    dii_sell = float(last_entry['dii_sell_value'])
-    dii_net = dii_buy - dii_sell
-
-    fii_sign = "🟢" if fii_net >= 0 else "🔴"
-    dii_sign = "🟢" if dii_net >= 0 else "🔴"
-
-    table = f"""
-*FII/DII Activity (Yesterday)* 📊
-| Investor | Buy (₹ Cr) | Sell (₹ Cr) | Net (₹ Cr) |
-|----------|------------|-------------|------------|
-| FII      | {fii_buy:.2f}     | {fii_sell:.2f}     | {fii_net:+.2f} {fii_sign}     |
-| DII      | {dii_buy:.2f}     | {dii_sell:.2f}     | {dii_net:+.2f} {dii_sign}     |
-"""
-    return table
-
 def build_summary():
     today = datetime.datetime.now().strftime('%Y-%m-%d')
     print(f"Trade setup for {today}")
@@ -99,8 +81,7 @@ def build_summary():
     inr_latest, inr_previous = fetch_data('INR=X')
     hsi_latest, hsi_previous = fetch_data('^HSI')
 
-    updates = get_economic_updates()
-    fii_dii_text = fetch_fii_dii_data()
+    macro_updates = get_us_macro_updates()
 
     def format_change(latest, previous):
         if latest is None or previous is None:
@@ -121,15 +102,9 @@ def build_summary():
     print(f"*USD/INR*: {inr_latest:.2f}" if inr_latest else "*USD/INR*: N/A")
     print(f"*Hang Seng*: {hsi_latest:.2f}" if hsi_latest else "*Hang Seng*: N/A")
 
-    print("\n" + fii_dii_text)
+    print("\nUS Macro Updates 🏛️")
+    for line in macro_updates:
+        print(line)
 
-    if updates:
-        print("\n*Recent Economic Updates* 📈")
-        for update in updates:
-            print(update)
-
-if __name__ == "__main__":
-    try:
-        build_summary()
-    except Exception as e:
-        print(f"Error in main function: {e}")
+# Run the summary
+build_summary()
