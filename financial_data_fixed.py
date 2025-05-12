@@ -4,12 +4,10 @@ import json
 import requests
 from datetime import timedelta
 
-# FRED API setup
 API_KEY = "e5b94614ba607e9725122f6ce56e5e2e"
 BASE_URL = "https://api.stlouisfed.org/fred/series/observations"
 
 def fetch_recent_fred_data(series_id, label):
-    """Fetches the latest data for a given FRED series ID and checks if released in the last 24 hours."""
     params = {
         "series_id": series_id,
         "api_key": API_KEY,
@@ -39,13 +37,14 @@ def get_economic_updates():
 
 def fetch_data(symbol):
     print(f"Fetching data for {symbol}...")
-    data = yf.download(symbol, period="2d", progress=False)
-    if data.empty or len(data) < 2:
+    data = yf.download(symbol, period="7d", progress=False)
+    if data.empty or len(data['Close'].dropna()) < 2:
         print(f"Warning: No data found for {symbol}")
         return None, None
 
-    latest = data['Close'].iloc[-1].item()
-    previous = data['Close'].iloc[-2].item()
+    clean_close = data['Close'].dropna()
+    latest = clean_close.iloc[-1].item()
+    previous = clean_close.iloc[-2].item()
     return latest, previous
 
 def fetch_fii_dii_data():
@@ -68,7 +67,6 @@ def fetch_fii_dii_data():
         return "*FII/DII Activity*: Unable to fetch data ⚠️"
 
     last_entry = data['data'][-1]
-
     fii_buy = float(last_entry['fii_buy_value'])
     fii_sell = float(last_entry['fii_sell_value'])
     fii_net = fii_buy - fii_sell
@@ -95,13 +93,6 @@ def build_summary():
     print("-" * 50)
 
     vix_latest, vix_previous = fetch_data('^VIX')
-    if vix_latest is None:
-        vix_change = vix_percent_change = vix_direction = "N/A"
-    else:
-        vix_change = vix_latest - vix_previous
-        vix_percent_change = (vix_change / vix_previous) * 100
-        vix_direction = "UP 🟢" if vix_change >= 0 else "DOWN 🔴"
-
     sp500_latest, sp500_previous = fetch_data('^GSPC')
     crude_latest, crude_previous = fetch_data('CL=F')
     gold_latest, gold_previous = fetch_data('GC=F')
@@ -111,9 +102,25 @@ def build_summary():
     updates = get_economic_updates()
     fii_dii_text = fetch_fii_dii_data()
 
-    print(f"\n*VIX*: {vix_latest:.2f} ({vix_direction}, {vix_percent_change:.2f}%)")
-    print(f"*S&P 500*: {sp500_latest} | *Crude*: {crude_latest} | *Gold*: {gold_latest}")
-    print(f"*USD/INR*: {inr_latest} | *Hang Seng*: {hsi_latest}")
+    def format_change(latest, previous):
+        if latest is None or previous is None:
+            return "N/A", "N/A", "N/A"
+        change = latest - previous
+        percent = (change / previous) * 100
+        direction = "🟢 UP" if change >= 0 else "🔴 DOWN"
+        return f"{latest:.2f}", f"{percent:.2f}%", direction
+
+    vix_val, vix_pct, vix_dir = format_change(vix_latest, vix_previous)
+    crude_val, crude_pct, crude_dir = format_change(crude_latest, crude_previous)
+    gold_val, gold_pct, gold_dir = format_change(gold_latest, gold_previous)
+
+    print(f"\n*VIX*: {vix_val} ({vix_dir}, {vix_pct})")
+    print(f"*S&P 500*: {sp500_latest:.2f}" if sp500_latest else "*S&P 500*: N/A")
+    print(f"*Crude*: {crude_val} ({crude_dir}, {crude_pct})")
+    print(f"*Gold*: {gold_val} ({gold_dir}, {gold_pct})")
+    print(f"*USD/INR*: {inr_latest:.2f}" if inr_latest else "*USD/INR*: N/A")
+    print(f"*Hang Seng*: {hsi_latest:.2f}" if hsi_latest else "*Hang Seng*: N/A")
+
     print("\n" + fii_dii_text)
 
     if updates:
@@ -121,7 +128,6 @@ def build_summary():
         for update in updates:
             print(update)
 
-# Run the main logic
 if __name__ == "__main__":
     try:
         build_summary()
