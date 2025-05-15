@@ -7,53 +7,47 @@ from contextlib import redirect_stdout
 API_KEY = "e5b94614ba607e9725122f6ce56e5e2e"
 FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
 
-from fredapi import Fred
-fred = Fred(api_key=API_KEY)
+def fetch_recent_fred_data(series_id, label, format_func=None):
+    params = {
+        "series_id": series_id,
+        "api_key": API_KEY,
+        "file_type": "json"
+    }
+    response = requests.get(FRED_URL, params=params)
+    data = response.json()
 
-from datetime import datetime, timedelta
-
-def format_cpi(label, latest, previous, date):
-    change = latest - previous if previous is not None else 0
-    direction = "🔻" if change < 0 else "🟢" if change > 0 else "➡️"
-    change_str = f"{change:.2f}" if previous is not None else "—"
-    return f"*{label} (YoY)*: {latest:.2f}% ({direction}, {change_str} pp) — as of {date}"
-
-def format_gdp(label, latest, previous, date):
-    change = latest - previous if previous is not None else 0
-    direction = "🔻" if change < 0 else "🟢" if change > 0 else "➡️"
-    change_str = f"{change:.2f}" if previous is not None else "—"
-    return f"*{label} (Quarterly)*: {latest:.2f} Tn USD ({direction}, {change_str}) — as of {date}"
-
-
-def fetch_recent_fred_data(series_id, label, formatter=None):
-    try:
-        data = fred.get_series(series_id)
-        if data.empty:
-            return None
-
-        last_date = data.index[-1].to_pydatetime().date()
-        today = datetime.now().date()
-
-        # ✅ 24-hour freshness check
-        if today - last_date > timedelta(days=1):
-            return None
-
-        latest = data.iloc[-1]
-        previous = data.iloc[-2] if len(data) > 1 else None
-
-        # Optional: use a formatter like format_cpi if passed
-        if formatter:
-            return formatter(label, latest, previous, last_date)
-
-        # Default simple format with direction
-        change = latest - previous if previous is not None else 0
-        direction = "🔻" if change < 0 else "🟢" if change > 0 else "➡️"
-        change_str = f"{change:.2f}" if previous is not None else "—"
-        return f"*{label}*: {latest:.2f} ({direction}, {change_str}) — as of {last_date}"
-
-    except Exception as e:
-        print(f"Error fetching {label}: {e}")
+    observations = data.get("observations", [])
+    if len(observations) < 2:
         return None
+
+    latest = observations[-1]
+    previous = observations[-2]
+
+    if latest["value"] == "." or previous["value"] == ".":
+        return None
+
+    latest_value = float(latest["value"])
+    previous_value = float(previous["value"])
+    date_str = latest["date"]
+    date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    today = datetime.date.today()
+
+    # Only return update if data changed and is fresh (within 24 hours)
+    if latest_value != previous_value and (today - date_obj <= timedelta(days=1)):
+        change = latest_value - previous_value
+        change_pct = (change / previous_value) * 100
+        if format_func:
+            return format_func(label, latest_value, change, change_pct, date_str)
+        else:
+            arrow = "🟢" if change > 0 else "🔻"
+            return f"*{label}*: {latest_value:.2f} ({arrow}, {change:+.2f}, {change_pct:+.2f}%) — as of {date_str}"
+    return None
+
+def format_cpi(label, val, change, pct, date):
+    return f"*{label} (YoY)*: {val:.2f}% ({'🟢' if change > 0 else '🔻'}, {change:+.2f} pp) — as of {date}"
+
+def format_gdp(label, val, change, pct, date):
+    return f"*{label} (Quarterly)*: {val:.2f} Tn USD ({'🟢' if change > 0 else '🔻'}, {change:+.2f}) — as of {date}"
 
 def get_us_macro_updates():
     updates = [
