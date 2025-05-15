@@ -7,44 +7,35 @@ from contextlib import redirect_stdout
 API_KEY = "e5b94614ba607e9725122f6ce56e5e2e"
 FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
 
-def fetch_recent_fred_data(series_id, label, format_func=None):
-    params = {
-        "series_id": series_id,
-        "api_key": API_KEY,
-        "file_type": "json"
-    }
-    response = requests.get(FRED_URL, params=params)
-    data = response.json()
+def fetch_recent_fred_data(series_id, label, formatter=None):
+    try:
+        data = fred.get_series(series_id)
+        if data.empty:
+            return None
 
-    observations = data.get("observations", [])
-    if len(observations) < 2:
+        last_date = data.index[-1].to_pydatetime().date()
+        today = datetime.now().date()
+
+        # ✅ 24-hour freshness check
+        if today - last_date > timedelta(days=1):
+            return None
+
+        latest = data.iloc[-1]
+        previous = data.iloc[-2] if len(data) > 1 else None
+
+        # Optional: use a formatter like format_cpi if passed
+        if formatter:
+            return formatter(label, latest, previous, last_date)
+
+        # Default simple format with direction
+        change = latest - previous if previous is not None else 0
+        direction = "🔻" if change < 0 else "🟢" if change > 0 else "➡️"
+        change_str = f"{change:.2f}" if previous is not None else "—"
+        return f"*{label}*: {latest:.2f} ({direction}, {change_str}) — as of {last_date}"
+
+    except Exception as e:
+        print(f"Error fetching {label}: {e}")
         return None
-
-    latest = observations[-1]
-    previous = observations[-2]
-
-    if latest["value"] == "." or previous["value"] == ".":
-        return None
-
-    latest_value = float(latest["value"])
-    previous_value = float(previous["value"])
-    date = latest["date"]
-
-    if latest_value != previous_value:
-        change = latest_value - previous_value
-        change_pct = (change / previous_value) * 100
-        if format_func:
-            return format_func(label, latest_value, change, change_pct, date)
-        else:
-            arrow = "🟢" if change > 0 else "🔻"
-            return f"*{label}*: {latest_value:.2f} ({arrow}, {change:+.2f}, {change_pct:+.2f}%) — as of {date}"
-    return None
-
-def format_cpi(label, val, change, pct, date):
-    return f"*{label} (YoY)*: {val:.2f}% ({'🟢' if change > 0 else '🔻'}, {change:+.2f} pp) — as of {date}"
-
-def format_gdp(label, val, change, pct, date):
-    return f"*{label} (Quarterly)*: {val:.2f} Tn USD ({'🟢' if change > 0 else '🔻'}, {change:+.2f}) — as of {date}"
 
 def get_us_macro_updates():
     updates = [
