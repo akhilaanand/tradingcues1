@@ -7,6 +7,24 @@ from contextlib import redirect_stdout
 API_KEY = "e5b94614ba607e9725122f6ce56e5e2e"
 FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
 
+from fredapi import Fred
+fred = Fred(api_key=API_KEY)
+
+from datetime import datetime, timedelta
+
+def format_cpi(label, latest, previous, date):
+    change = latest - previous if previous is not None else 0
+    direction = "🔻" if change < 0 else "🟢" if change > 0 else "➡️"
+    change_str = f"{change:.2f}" if previous is not None else "—"
+    return f"*{label} (YoY)*: {latest:.2f}% ({direction}, {change_str} pp) — as of {date}"
+
+def format_gdp(label, latest, previous, date):
+    change = latest - previous if previous is not None else 0
+    direction = "🔻" if change < 0 else "🟢" if change > 0 else "➡️"
+    change_str = f"{change:.2f}" if previous is not None else "—"
+    return f"*{label} (Quarterly)*: {latest:.2f} Tn USD ({direction}, {change_str}) — as of {date}"
+
+
 def fetch_recent_fred_data(series_id, label, formatter=None):
     try:
         data = fred.get_series(series_id)
