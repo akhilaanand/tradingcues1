@@ -2,6 +2,7 @@ import yfinance as yf
 import datetime
 import requests
 from datetime import timedelta
+from contextlib import redirect_stdout
 
 API_KEY = "e5b94614ba607e9725122f6ce56e5e2e"
 FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
@@ -106,5 +107,9 @@ def build_summary():
     for line in macro_updates:
         print(line)
 
-# Run the summary
+with open("market_summary.txt", "w", encoding="utf-8") as f:
+    with redirect_stdout(f):
+        build_summary()
+
+# Also print to terminal
 build_summary()
