@@ -1,1 +1,124 @@
 
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark">
+                <h3 class="mb-0">Subscribe to Daily Trading Cues</h3>
+            </div>
+            <div class="card-body">
+                <form id="subscription-form" action="{{ url_for('subscribe') }}" method="post">
+                    <div class="mb-4">
+                        <h5>Contact Information</h5>
+                        <p class="text-secondary small">Provide at least one contact method below:</p>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </span>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="your@email.com">
+                            </div>
+                            <div class="form-text">We'll never share your email with anyone else.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="slack_id" class="form-label">Slack ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fa-brands fa-slack"></i>
+                                </span>
+                                <input type="text" class="form-control" id="slack_id" name="slack_id" placeholder="U01234ABCDE">
+                            </div>
+                            <div class="form-text">Your Slack member ID for direct notifications.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Trading Cues</h5>
+                        <p class="text-secondary small">Select the trading information you'd like to receive:</p>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check d-flex align-items-center form-switch ps-0">
+                                    <input class="form-check-input me-3 ms-0" type="checkbox" role="switch" id="sp500" name="sp500">
+                                    <label class="form-check-label d-flex align-items-center gap-2" for="sp500">
+                                        <i class="fa-solid fa-chart-line text-success"></i> S&P 500
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check d-flex align-items-center form-switch ps-0">
+                                    <input class="form-check-input me-3 ms-0" type="checkbox" role="switch" id="nifty" name="nifty">
+                                    <label class="form-check-label d-flex align-items-center gap-2" for="nifty">
+                                        <i class="fa-solid fa-chart-column text-primary"></i> Nifty
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check d-flex align-items-center form-switch ps-0">
+                                    <input class="form-check-input me-3 ms-0" type="checkbox" role="switch" id="vix" name="vix">
+                                    <label class="form-check-label d-flex align-items-center gap-2" for="vix">
+                                        <i class="fa-solid fa-chart-area text-warning"></i> VIX
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check d-flex align-items-center form-switch ps-0">
+                                    <input class="form-check-input me-3 ms-0" type="checkbox" role="switch" id="inr_usd" name="inr_usd">
+                                    <label class="form-check-label d-flex align-items-center gap-2" for="inr_usd">
+                                        <i class="fa-solid fa-dollar-sign text-info"></i> INR USD
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check d-flex align-items-center form-switch ps-0">
+                                    <input class="form-check-input me-3 ms-0" type="checkbox" role="switch" id="fii_dii" name="fii_dii">
+                                    <label class="form-check-label d-flex align-items-center gap-2" for="fii_dii">
+                                        <i class="fa-solid fa-building-columns text-secondary"></i> FII DII Data
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check d-flex align-items-center form-switch ps-0">
+                                    <input class="form-check-input me-3 ms-0" type="checkbox" role="switch" id="us_macro" name="us_macro">
+                                    <label class="form-check-label d-flex align-items-center gap-2" for="us_macro">
+                                        <i class="fa-solid fa-flag-usa text-danger"></i> US Macro Indicators
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check d-flex align-items-center form-switch ps-0">
+                                    <input class="form-check-input me-3 ms-0" type="checkbox" role="switch" id="india_macro" name="india_macro">
+                                    <label class="form-check-label d-flex align-items-center gap-2" for="india_macro">
+                                        <i class="fa-solid fa-landmark text-primary"></i> India Macro Indicators
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary px-4 py-2">
+                            <i class="fa-solid fa-paper-plane me-2"></i> Subscribe Now
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/form_validation.js') }}"></script>
+{% endblock %}
