@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <div class="card shadow-sm border-success">
+            <div class="card-body p-5">
+                <div class="mb-4">
+                    <i class="fa-solid fa-circle-check text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h2 class="mb-3">Subscription Successful!</h2>
+                <p class="lead mb-4">Thank you for subscribing to our trading cues service.</p>
+                <p class="mb-4">We have noted your preferences and will begin sending updates from the next trading day.</p>
+                
+                <div class="alert alert-info">
+                    <i class="fa-solid fa-info-circle me-2"></i>
+                    You'll receive notifications based on your selected trading cues and preferred contact method.
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-arrow-left me-2"></i> Return to Subscription Form
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
