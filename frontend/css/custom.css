@@ -1,0 +1,56 @@
+/* Custom CSS for Trading Cues Subscription Form */
+
+/* Set a lighter navy blue background */
+body {
+    background-color: #1a3a5c !important;
+}
+
+/* Add some subtle enhancements while keeping mostly to Bootstrap defaults */
+.form-check-input {
+    cursor: pointer;
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+/* Make checkboxes a bit larger and more visible */
+.form-switch .form-check-input {
+    width: 2.5em;
+    height: 1.25em;
+}
+
+/* Add some subtle transition effects */
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Custom styling for the success page icon animation */
+.fa-circle-check {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Improve spacing on mobile */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
